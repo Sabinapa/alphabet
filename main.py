@@ -205,10 +205,68 @@ def delete_images_ending_with_01(root_folder):
                     print(f"Napaka pri brisanju {file_path}: {e}")
     print(f"\nSkupno izbrisanih slik: {count}")
 
+def extract_features(image, split=4):
+    h, w = image.shape
+    features = []
+
+    block_h = h // split
+    block_w = w // split
+
+    for i in range(split):
+        for j in range(split):
+            y_start = i * block_h
+            x_start = j * block_w
+            block = image[y_start:y_start + block_h, x_start:x_start + block_w]
+
+            total_pixels = block.size
+            dark_pixels = np.sum(block < 128)
+            dark_ratio = dark_pixels / total_pixels
+
+            features.append(dark_pixels)
+            features.append(round(dark_ratio, 4))  # zaokroženo
+
+    return features
+
+def parse_filename(filename):
+    #('sc032', 'mala_pisana', 'A', '02')
+    base = os.path.splitext(os.path.basename(filename))[0]
+    deli = base.split("_")
+    if len(deli) >= 5:
+        return deli[0], f"{deli[1]}_{deli[2]}", deli[3], deli[4]
+    return base, "neznano", "?", "00"
+
+def extract_features_from_images(image_dir, grid_size=4, output_csv="znacilke.csv"):
+    header = ["ime_slike", "tip_crke", "crka", "stevilka"]
+
+    for i in range(grid_size * grid_size):
+        header.append(f"temni_{i}")
+        header.append(f"razmerje_{i}")
+
+    with open(output_csv, "w", newline='', encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+
+        for subfolder, _, _ in os.walk(image_dir):
+            for image_path in glob(os.path.join(subfolder, "*.png")):
+                image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+                if image is None:
+                    continue
+
+                image = cv2.resize(image, (64, 64))  # enotna velikost
+                _, binary_image = cv2.threshold(image, 180, 255, cv2.THRESH_BINARY_INV)
+
+                ime_slike, tip_crke, crka, stevilka = parse_filename(image_path)
+                znacilke = extract_features(binary_image, grid_size)
+                vrstica = [ime_slike, tip_crke, crka, stevilka] + znacilke
+                writer.writerow(vrstica)
+
+    print(f"Zapisano v datoteko: {output_csv}")
+
 if __name__ == "__main__":
     nameAlphabet = "izhod_abeceda"
     #process_first_5_images_auto_type("test crke", "izhod_vse_auto")
     #process_all_from_subfolders("new abeceda", nameAlphabet)
     #delete_images_ending_with_01(nameAlphabet)
+    extract_features_from_images("izhod_abeceda", grid_size=4, output_csv="znacilke.csv")
 
 
