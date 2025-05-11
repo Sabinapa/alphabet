@@ -1,4 +1,5 @@
 import cv2
+import csv
 import numpy as np
 import os
 from glob import glob
@@ -79,9 +80,9 @@ def estimate_type_by_cell_shape(cells, image, matrix, resize_dim=(64, 64)):
             return "mala_tiskana"
     return "neznana"
 
-def normaliziraj_znak(znak):
-    posebni = {"Č": "CC", "Š": "SS", "Ž": "ZZ"}
-    return posebni.get(znak, znak)  # če ni poseben, vrne original
+def normalize_character(char):
+    special = {"Č": "CC", "Š": "SS", "Ž": "ZZ"}
+    return special.get(char, char)  # če ni poseben, vrne original
 
 def process_first_5_images_auto_type(input_dir, output_dir_root, resize_dim=(64, 64)):
     os.makedirs(output_dir_root, exist_ok=True)
@@ -103,7 +104,6 @@ def process_first_5_images_auto_type(input_dir, output_dir_root, resize_dim=(64,
 
         if len(cells) != rows * cols:
             print(f"Opozorilo: pričakovanih {rows * cols} celic, najdenih {len(cells)} v {filename}")
-            print("Nadaljujem z delnim izrezom...")
 
         # Najprej ustvarimo matriko
         cells_sorted = sorted(cells, key=lambda r: (r[0], r[1]))  # sort by x (stolpec), y (vrstica)
@@ -133,12 +133,82 @@ def process_first_5_images_auto_type(input_dir, output_dir_root, resize_dim=(64,
                 cell = cropped[y:y+h, x:x+w]
                 resized = cv2.resize(cell, resize_dim)
                 base = os.path.splitext(filename)[0]
-                znak = normaliziraj_znak(letter)
+                znak = normalize_character(letter)
                 out_name = f"{base}_{tip}_{znak}_{row + 1:02d}.png"
                 out_path = os.path.join(output_dir, out_name)
                 cv2.imwrite(out_path, resized)
 
         print(f"{filename}: zaznano kot {tip}, izrezanih približno {min(rows * cols, len(cells))} črk")
 
+def process_all_from_subfolders(input_root, output_root, resize_dim=(64, 64)):
+    os.makedirs(output_root, exist_ok=True)
+    abeceda = list("ABCČDEFGHIJKLMNOPRSŠTUVZŽ")
+    cols = 25
+    rows = 50
+
+    for subfolder in os.listdir(input_root):
+        subfolder_path = os.path.join(input_root, subfolder)
+        if not os.path.isdir(subfolder_path):
+            continue
+
+        image_paths = sorted(glob(os.path.join(subfolder_path, "*.png")))
+        for image_path in image_paths:
+            filename = os.path.basename(image_path)
+            image = cv2.imread(image_path)
+            if image is None:
+                print(f"Napaka pri branju slike: {filename}")
+                continue
+
+            cropped = preprocess_and_crop(image)
+            cells = auto_detect_cells(cropped)
+
+            cells_sorted = sorted(cells, key=lambda r: (r[0], r[1]))
+            matrix = np.full((cols, rows), None)
+
+            for i in range(min(rows * cols, len(cells_sorted))):
+                c = i // rows
+                r = i % rows
+                if c < cols and r < rows:
+                    matrix[c][r] = cells_sorted[i]
+
+            tip = subfolder  # Uporabi kar ime mape (npr. 'mala tiskana')
+            output_dir = os.path.join(output_root, tip.replace(" ", "_"))
+            os.makedirs(output_dir, exist_ok=True)
+
+            for col in range(cols):
+                letter = abeceda[col]
+                znak = normalize_character(letter)
+                for row in range(rows):
+                    cell_data = matrix[col][row]
+                    if cell_data is None:
+                        continue
+                    x, y, w, h = cell_data
+                    cell = cropped[y:y+h, x:x+w]
+                    resized = cv2.resize(cell, resize_dim)
+                    base = os.path.splitext(filename)[0]
+                    out_name = f"{base}_{tip.replace(' ', '_')}_{znak}_{row + 1:02d}.png"
+                    out_path = os.path.join(output_dir, out_name)
+                    cv2.imwrite(out_path, resized)
+
+            print(f"{filename} ({tip}) → izrezanih približno {min(rows * cols, len(cells))} črk")
+
+def delete_images_ending_with_01(root_folder):
+    count = 0
+    for subdir, _, _ in os.walk(root_folder):
+        for file_path in glob(os.path.join(subdir, "*.png")):
+            if file_path.endswith("_01.png"):
+                try:
+                    os.remove(file_path)
+                    print(f"Zbrisano: {file_path}")
+                    count += 1
+                except Exception as e:
+                    print(f"Napaka pri brisanju {file_path}: {e}")
+    print(f"\nSkupno izbrisanih slik: {count}")
+
 if __name__ == "__main__":
-    process_first_5_images_auto_type("abeceda", "izhod_vse_auto")
+    nameAlphabet = "izhod_abeceda"
+    #process_first_5_images_auto_type("test crke", "izhod_vse_auto")
+    #process_all_from_subfolders("new abeceda", nameAlphabet)
+    #delete_images_ending_with_01(nameAlphabet)
+
+
