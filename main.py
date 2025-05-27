@@ -334,6 +334,9 @@ if __name__ == "__main__":
     #process_first_5_images_auto_type("test crke", "izhod_vse_auto")
     #process_all_from_subfolders("new abeceda", nameAlphabet)
     #delete_images_ending_with_01(nameAlphabet)
-    extract_features_from_images("izhod_abeceda", grid_size=4, output_csv="znacilke.csv")
+
+    extract_features_from_images("izhod_abeceda", grid_size=10, output_csv="znacilke_10x10.csv")
+    extract_features_from_images("izhod_abeceda", grid_size=15, output_csv="znacilke_15x15.csv")
+
 
 

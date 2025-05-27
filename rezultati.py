@@ -5,9 +5,31 @@ import seaborn as sns
 import matplotlib
 matplotlib.use("Agg")
 
-input_folder = "rezultati/1 modeli"
+def get_csv_files(path: str, recursive: bool = True):
+    """
+    Vrne seznam poti do CSV datotek v dani mapi.
+    Če je recursive=True, bo iskal tudi po podmapah.
+    """
+    if recursive:
+        csv_files = []
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if file.endswith(".csv"):
+                    csv_files.append(os.path.join(root, file))
+    else:
+        csv_files = [
+            os.path.join(path, f) for f in os.listdir(path)
+            if f.endswith(".csv") and os.path.isfile(os.path.join(path, f))
+        ]
+    return csv_files
 
-csv_files = [os.path.join(input_folder, f) for f in os.listdir(input_folder) if f.endswith(".csv")]
+
+# --- Nastavi mapo in možnost rekurzivnega iskanja ---
+input_folder = "rezultati"  # ali "rezultati/1 modeli ali rezultati"
+recursive_search = True    # ali False za točno določeno mapo ali TRUE za iskanje v celotni mapi
+
+# --- Pridobi CSV datoteke glede na izbiro ---
+csv_files = get_csv_files(input_folder, recursive=recursive_search)
 
 # Združi vse rezultate v en DataFrame
 dfs = []
