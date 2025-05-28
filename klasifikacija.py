@@ -72,10 +72,18 @@ modeli2 = {
     "Ridge Classifier (C=2.0)": LogisticRegression(penalty="l2", C=2.0, solver="liblinear", max_iter=300)
 }
 
+testmodel = {
+    "Extra Trees (n=40)": RandomForestClassifier(n_estimators=40, bootstrap=False),
+}
+
 selected_files = [
     "znacilke/znacilke_4x4.csv",
     "znacilke/znacilke_10x10.csv",
     "znacilke/znacilke_15x15.csv"
+]
+
+selected_files1 = [
+    "znacilke_3x3.csv",
 ]
 
 # Define test/train split ratio and seed for reproducibility
@@ -84,13 +92,13 @@ random_state = 42
 execution_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 results = []
 
-for csv_file in selected_files:
+for csv_file in selected_files1:
     grid_size = csv_file.split("_")[1].replace(".csv", "")  # Extract grid size label from file name
     print(f"\nZačenjam obdelavo za: {csv_file}")
 
     df = pd.read_csv(csv_file)
-    X = df.drop(columns=["ime_slike", "tip_crke", "crka", "stevilka"]) # Drop metadata columns
-    y = LabelEncoder().fit_transform(df["crka"]) # Encode target labels (letters)
+    X = df.drop(columns=["ime_slike", "ime", "stevilka"]) # Drop metadata columns
+    y = LabelEncoder().fit_transform(df["ime"]) # Encode target labels (letters + types)
 
     # Normalize features using standard scaling
     scaler = StandardScaler()
@@ -99,7 +107,7 @@ for csv_file in selected_files:
     # Split data into training and testing sets
     X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=random_state)
 
-    for name, model in modeli2.items():
+    for name, model in testmodel.items():
         try:
             print(f"Učim model: {name}")
             start = time.time()
@@ -117,5 +125,5 @@ for csv_file in selected_files:
 results_df = pd.DataFrame(results, columns=[
     "Delitev", "Model", "Accuracy", "Čas (s)", "Test size", "Random state", "Datum"
 ])
-results_df.to_csv("rezultati_modelov_vec_dimenzij.csv", index=False)
+results_df.to_csv("novi_rezultat.csv", index=False)
 print("\nRezultati shranjeni v datoteko 'rezultati_modelov_vec_dimenzij.csv'")

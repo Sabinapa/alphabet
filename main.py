@@ -294,12 +294,12 @@ def parse_filename(filename):
 
 def extract_features_from_images(image_dir, grid_size=4, output_csv="znacilke.csv"):
     # Create CSV header: metadata + features
-    header = ["ime_slike", "tip_crke", "crka", "stevilka"]  # metadata columns
+    header = ["ime_slike", "ime", "stevilka"]  # ime = tip_crke + "_" + crka
 
     # Add feature names for each grid cell (dark pixel count + ratio)
     for i in range(grid_size * grid_size):
-        header.append(f"temni_{i}") # number of dark pixels
-        header.append(f"razmerje_{i}") # ratio of dark pixels
+        header.append(f"temni_{i}")     # number of dark pixels
+        header.append(f"razmerje_{i}")  # ratio of dark pixels
 
     # Open the output CSV file for writing
     with open(output_csv, "w", newline='', encoding="utf-8") as f:
@@ -314,17 +314,22 @@ def extract_features_from_images(image_dir, grid_size=4, output_csv="znacilke.cs
                 if image is None:
                     continue
 
-                image = cv2.resize(image, (64, 64)) # Resize image to standard size
+                image = cv2.resize(image, (64, 64))  # Resize image to standard size
 
                 # Convert image to binary (white background, black letters)
                 _, binary_image = cv2.threshold(image, 180, 255, cv2.THRESH_BINARY_INV)
 
                 # Extract metadata from filename
                 ime_slike, tip_crke, crka, stevilka = parse_filename(image_path)
+
+                # Combine tip_crke and crka into a single label
+                label = f"{tip_crke}_{crka}"
+
                 # Extract grid-based features from the binary image
                 znacilke = extract_features(binary_image, grid_size)
+
                 # Compose the full row and write to CSV
-                vrstica = [ime_slike, tip_crke, crka, stevilka] + znacilke
+                vrstica = [ime_slike, label, stevilka] + znacilke
                 writer.writerow(vrstica)
 
     print(f"Zapisano v datoteko: {output_csv}")
@@ -335,8 +340,12 @@ if __name__ == "__main__":
     #process_all_from_subfolders("new abeceda", nameAlphabet)
     #delete_images_ending_with_01(nameAlphabet)
 
-    extract_features_from_images("izhod_abeceda", grid_size=10, output_csv="znacilke_10x10.csv")
-    extract_features_from_images("izhod_abeceda", grid_size=15, output_csv="znacilke_15x15.csv")
+    extract_features_from_images("izhod_abeceda", grid_size=3, output_csv="znacilke_3x3.csv")
+    extract_features_from_images("izhod_abeceda", grid_size=3, output_csv="znacilke_4x4.csv")
+    extract_features_from_images("izhod_abeceda", grid_size=3, output_csv="znacilke_5x5.csv")
+    extract_features_from_images("izhod_abeceda", grid_size=3, output_csv="znacilke_10x10.csv")
+    extract_features_from_images("izhod_abeceda", grid_size=3, output_csv="znacilke_15x15.csv")
+
 
 
 
